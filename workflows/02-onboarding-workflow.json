@@ -1,0 +1,308 @@
+{
+  "name": "Onboarding",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a8808723-cd5b-4082-80c8-519c2694d5d5",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE creators\nSET status = 'onboarding'\nWHERE channel_id IN (\n  SELECT channel_id FROM creators\n  WHERE status = 'accepted'\n  ORDER BY first_seen_at\n  LIMIT 5\n  FOR UPDATE SKIP LOCKED\n)\nRETURNING channel_id, channel_title, matched_keyword, contact_email;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "59b9353b-10b9-40f1-b4e1-c2f48f835f70",
+      "name": "Claim accepted creators",
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Write a warm, 35-word max welcome message spoken aloud to a YouTube\ncreator named \"{{ $json.channel_title }}\" who makes content about\n\"{{ $json.matched_keyword }}\". Welcoming ElevenLabs creator program.\nPlain text only, no emojis, no hashtags."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "638fcf56-761a-4195-a1bc-d499f27fde90",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "salmasaida003@gmail.com",
+        "subject": "Onboarding 🎉",
+        "message": "={{ $json.output[0].content[0].text }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "10235859-40fa-43a1-8ca9-b872ad6c3609",
+      "name": "Send onboarding message",
+      "webhookId": "a07cb0be-1dc5-4529-96fb-9bf86acdb8ca",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "MQwxtbZ5biyKQvrO",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/PStJ2DzQnh8zxG5PDf1s",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "elevenLabsMcpOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $json.output[0].content[0].text }}\",\n  \"model_id\": \"eleven_multilingual_v2\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "52bbd144-c6f8-4da7-bca4-6621fda7b4bf",
+      "name": "Voice note",
+      "retryOnFail": true,
+      "credentials": {
+        "elevenLabsMcpOAuth2Api": {
+          "id": "FJm9BNpHr0QymbB8",
+          "name": "ElevenLabs account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE creators\nSET status = 'onboarded', onboarded_at = now(), onboarding_error = NULL\nWHERE channel_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $('Claim accepted creators').item.json.channel_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "80673815-57fe-4678-9fdd-1b698c283bf6",
+      "name": "Mark onboarded",
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_log (entity_type, entity_id, action, details)\nVALUES ('creator', $1, 'onboarded', $2::jsonb);",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim accepted creators').first().json.channel_id, JSON.stringify({ email: $('Claim accepted creators').first().json.contact_email }) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "06293c9d-0b66-4537-9b13-2e71cebe3743",
+      "name": "Audit Log",
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE creators\nSET status = 'onboarding_failed', onboarding_error = $2\nWHERE channel_id = $1;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim accepted creators').item.json.channel_id, $json.error || $json.message || \"Failed onboarding\" ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1264,
+        240
+      ],
+      "id": "acbcce69-a7d0-4d5b-93fb-2eda9d32a7eb",
+      "name": "Failed onboarding status",
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Claim accepted creators",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim accepted creators": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Voice note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed onboarding status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send onboarding message": {
+      "main": [
+        [
+          {
+            "node": "Mark onboarded",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed onboarding status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voice note": {
+      "main": [
+        [
+          {
+            "node": "Send onboarding message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed onboarding status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark onboarded": {
+      "main": [
+        [
+          {
+            "node": "Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "94b1d2a5-ce1c-4891-a44a-34e3e2aff9fe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7bcd3f2abd3657f8c606a6047cc200e3f6fec41a2546e84fd430428b0e15d977"
+  },
+  "nodeGroups": [],
+  "id": "NeRkGsJjCoxeUafI",
+  "tags": []
+}

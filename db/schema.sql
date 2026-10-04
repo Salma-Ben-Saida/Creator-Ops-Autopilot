@@ -23,3 +23,10 @@ CREATE TABLE audit_log (
   details     JSONB,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
+
+
+
+
+ALTER TABLE creators
+  ADD COLUMN onboarded_at TIMESTAMPTZ,
+  ADD COLUMN onboarding_error TEXT;

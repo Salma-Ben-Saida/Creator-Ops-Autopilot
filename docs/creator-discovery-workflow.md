@@ -99,11 +99,4 @@ n8n Variables
 youtube_api_key: a YouTube Data API v3 key, read as $vars.youtube_api_key
 
 
-Notes and limitations
-YouTube API quota: each search call costs 100 units, so one run with 3 keywords uses about 300+ units. The default daily quota is 10,000 units.
 
-If the same channel shows up for several keywords in one run, it's saved once for each keyword. On conflict, matched_keyword is not updated, so the first keyword stays.
-matched_keyword is saved in lowercase.
-
-On an update, only the title, subscribers, views, video count, score and last_seen_at change.
-The workflow has no error handling. A failed API or database call stops the run.
