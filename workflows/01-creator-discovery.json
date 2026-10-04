@@ -1,0 +1,502 @@
+{
+  "name": "Creator Discovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2d8edb97-87f8-4bf4-80be-cb4090d16e13",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/youtube/v3/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "type",
+              "value": "channel"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.keyword }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "50"
+            },
+            {
+              "name": "relevanceLanguage",
+              "value": "en"
+            },
+            {
+              "name": "key",
+              "value": "={{ $vars.youtube_api_key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "33bd6355-c3d5-40a9-9775-c3f2b209366f",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -160
+      ],
+      "id": "95aacbd7-4281-46e8-9771-2892121a3d10",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "const keywords = [\"AI voiceover\", \"video editing tutorial\", \"podcast tips\"];\nreturn keywords.map(keyword => ({ json: { keyword } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "56aea552-c2a8-409b-9d37-f7eb91251ffa",
+      "name": "Keywords"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const keyword = $('Keywords').item.json.keyword;\nconst ids = [...new Set(($json.items || []).map(i => i.snippet.channelId))];\n\nreturn { json: { keyword, channelIds: ids.join(',') } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "bfb51b50-759c-450b-9005-7cfdc44744c9",
+      "name": "Prep IDs"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/channels",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "id",
+              "value": "={{ $json.channelIds }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "50"
+            },
+            {
+              "name": "key",
+              "value": "={{ $vars.youtube_api_key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "03fc3c0e-0afd-4896-a7ec-bb0c2e834cb9",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "2e990ea0-d531-48c2-8edd-de4fa912bda8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3918920c-e907-478f-8fb9-dfda1fe5e770",
+              "leftValue": "={{ $json.statistics.hiddenSubscriberCount }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7fcc3f85-7819-4bbe-9080-67ff0f87758e",
+              "leftValue": "={{ $json.statistics.subscriberCount }}",
+              "rightValue": 5000,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "eee32439-4966-4cec-bb40-f2b980fed5ba",
+              "leftValue": "={{ $json.statistics.subscriberCount }}",
+              "rightValue": 1000000,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "e06a4555-950a-4187-8444-7451ffe11c8d",
+              "leftValue": "={{ $json.statistics.videoCount }}",
+              "rightValue": 20,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "399cfd1b-29f3-4b5b-a590-8410f12200dc",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $json;\nconst keyword = $('Prep IDs').item.json.keyword.toLowerCase();\n\nconst subs   = Number(c.statistics.subscriberCount);\nconst views  = Number(c.statistics.viewCount);\nconst videos = Number(c.statistics.videoCount);\nconst text   = `${c.snippet.title} ${c.snippet.description || ''}`.toLowerCase();\n\n// engagement proxy: average views per video relative to subscribers\nconst avgViews  = views / Math.max(videos, 1);\nconst viewRatio = Math.min(avgViews / subs, 1);\n\n// keyword relevance: share of keyword words found in title/description\nconst words = keyword.split(' ').filter(w => w.length > 2);\nconst hits  = words.filter(w => text.includes(w)).length;\nconst keywordFit = words.length ? hits / words.length : 0;\n\nconst sizeFit = (subs >= 25000 && subs <= 250000) ? 1 : 0.5;\n\nconst score = viewRatio * 50 + keywordFit * 30 + sizeFit * 20;\n\nreturn { json: {\n  channel_id: c.id,\n  channel_title: c.snippet.title,\n  channel_url: `https://youtube.com/channel/${c.id}`,\n  country: c.snippet.country || null,\n  subscribers: subs,\n  total_views: views,\n  video_count: videos,\n  matched_keyword: keyword,\n  score: Number(score.toFixed(2)),\n  contact_email: `creator+${c.id.slice(-8).toLowerCase()}@example.com`  // fake on purpose\n}};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        0
+      ],
+      "id": "86780c60-f8c9-4ed1-a14f-3042e073440a",
+      "name": "Score"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89ae0687-b306-46b1-b302-21aa2b4ac646",
+              "leftValue": "={{ $json.inserted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "5b323d79-5471-4516-b3ee-5c8e3cb9e408",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO creators\n  (channel_id, channel_title, channel_url, country, subscribers,\n   total_views, video_count, matched_keyword, score, contact_email)\nVALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)\nON CONFLICT (channel_id) DO UPDATE SET\n  channel_title = EXCLUDED.channel_title,\n  subscribers   = EXCLUDED.subscribers,\n  total_views   = EXCLUDED.total_views,\n  video_count   = EXCLUDED.video_count,\n  score         = EXCLUDED.score,\n  last_seen_at  = now()\nRETURNING channel_id, (xmax = 0) AS inserted;",
+        "options": {
+          "queryReplacement": "={{ [ $json.channel_id, $json.channel_title, $json.channel_url, $json.country, $json.subscribers, $json.total_views, $json.video_count, $json.matched_keyword, $json.score, $json.contact_email ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "72fa1e88-ec69-4c40-a324-8dfca97b8211",
+      "name": "Upsert Creator",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_log (entity_type, entity_id, action, details)\nVALUES ('creator', $1, 'discovered', $2::jsonb);",
+        "options": {
+          "queryReplacement": "={{ [ $json.channel_id, JSON.stringify({ keyword: $('Score').item.json.matched_keyword, score: $('Score').item.json.score, subscribers: $('Score').item.json.subscribers }) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2240,
+        16
+      ],
+      "id": "7ba8c1f0-6fc4-4d2d-b164-af47ce0a5907",
+      "name": "Audit Log",
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = items.length;\nconst inserted = items.filter(i => i.json.inserted === true).length;\nreturn [{ json: {\n  text: `Creator discovery finished: ${inserted} new, ${total - inserted} updated (${total} passed filters)`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        176
+      ],
+      "id": "a2d43dac-b046-4a30-90fc-2842eb3ac802",
+      "name": "Summary"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_CHANNEL_ID",
+          "mode": "id"
+                },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2240,
+        176
+      ],
+      "id": "e35aec9f-235e-47a9-a49e-16e187b5aedd",
+      "name": "Send a message"
+      
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Prep IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keywords": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep IDs": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score": {
+      "main": [
+        [
+          {
+            "node": "Upsert Creator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Creator": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit Log": {
+      "main": [
+        []
+      ]
+    },
+    "Summary": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c8ab5be3-eb47-4e69-ae5e-3ca4c516cdd9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7bcd3f2abd3657f8c606a6047cc200e3f6fec41a2546e84fd430428b0e15d977"
+  },
+  "nodeGroups": [],
+  "id": "K2F6oaKjiUwZAHnS",
+  "tags": []
+}
