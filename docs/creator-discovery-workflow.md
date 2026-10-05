@@ -35,7 +35,7 @@ If (inserted?) Summary
 ▼ ▼
 Audit Log Slack message
 
-
+![creator-discovery-workflow-screenshot](/docs/workflow-screenshots/creator-discovery.png)
 ---
 
 ## Nodes

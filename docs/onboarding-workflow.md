@@ -20,6 +20,7 @@ Part of the **Creator Ops Autopilot** project. It runs after the
 | Delivery       | Gmail                                              |
 | Status         | Not published                                      |
 
+![onboarding-workflow-screenshot](/docs/workflow-screenshots/Onboarding.png)
 ---
 
 ## Flow

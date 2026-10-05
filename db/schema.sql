@@ -30,3 +30,19 @@ CREATE TABLE audit_log (
 ALTER TABLE creators
   ADD COLUMN onboarded_at TIMESTAMPTZ,
   ADD COLUMN onboarding_error TEXT;
+
+
+  CREATE TABLE contracts (
+  id            SERIAL PRIMARY KEY,
+  channel_id    TEXT NOT NULL REFERENCES creators(channel_id),
+  campaign      TEXT NOT NULL,
+  payout_amount NUMERIC(10,2) NOT NULL,
+  currency      TEXT NOT NULL DEFAULT 'USD',
+  post_deadline DATE NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'draft',  
+  envelope_id   TEXT,
+  sent_at       TIMESTAMPTZ,
+  signed_at     TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (channel_id, campaign)                
+);

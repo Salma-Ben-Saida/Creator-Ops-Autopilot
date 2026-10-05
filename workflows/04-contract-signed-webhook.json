@@ -1,0 +1,272 @@
+{
+  "name": "Contract signed webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "c5bd1721-1907-4bd9-8df2-d98f61073f09"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6f671cc1-8bcb-4609-bddf-a5349e573b0e",
+      "name": "Is document completed",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE contracts SET status = 'signed', signed_at = now()\nWHERE envelope_id = $1 AND status = 'sent'\nRETURNING id, channel_id;",
+        "options": {
+          "queryReplacement": "={{ $('DocuSeal Trigger').item.json.submission_id }}"
+        }
+      },
+      "id": "2d8c6955-3b4b-4c7e-a641-1e2624d06239",
+      "name": "Mark contract signed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.channel_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "id": "351e6357-3635-4e8a-8ca7-8aa2dc66bff6"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6ae4ed16-205d-4302-8673-08349c256c98",
+      "name": "Was newly signed",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE creators SET status = 'contracted' WHERE channel_id = $1\nRETURNING channel_id, channel_title;",
+        "options": {
+          "queryReplacement": "={{ $json.channel_id }}"
+        }
+      },
+      "id": "295e6f6e-dfe0-49d4-b2a4-e78df9479236",
+      "name": "Mark creator contracted",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_log (entity_type, entity_id, action, details)\nVALUES ('contract', $1, 'contract_signed', $2::jsonb);",
+        "options": {
+          "queryReplacement": "={{ [ String($(\"Mark contract signed\").item.json.id), JSON.stringify({ channel_id: $json.channel_id, envelope_id: $(\"DocuSeal Trigger\").item.json.submission_id }) ] }}"
+        }
+      },
+      "id": "b3da25d0-de8a-4d24-bc9f-f5a36d718e9c",
+      "name": "Audit contract signed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3aulJh8jV3dh5VmR",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "C0C6E3R8L83",
+          "cachedResultName": "all-salma-bensaida39s-workspace"
+        },
+        "text": "=Contract signed by {{ $(\"Mark creator contracted\").item.json.channel_title || $(\"Mark creator contracted\").item.json.channel_id }}",
+        "otherOptions": {}
+      },
+      "id": "03af98ba-76af-4304-956c-0e7b6eddb113",
+      "name": "Notify Slack: contract signed",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1344,
+        0
+      ],
+      "webhookId": "ccc22767-ce80-4a85-99a6-4f58610965f0",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XqIfoEJdFyb4ByRe",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "event": "form.completed"
+      },
+      "type": "@docuseal/n8n-nodes-docuseal.docusealTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "675e2c22-3c38-4e22-81ee-9f3b5b81eabc",
+      "name": "DocuSeal Trigger",
+      "webhookId": "3ed6d2d6-008d-4f53-855b-5db6295310bc",
+      "credentials": {
+        "docusealApi": {
+          "id": "TlTbAdeHc9hZbs1h",
+          "name": "DocuSeal account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Is document completed": {
+      "main": [
+        [
+          {
+            "node": "Mark contract signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark contract signed": {
+      "main": [
+        [
+          {
+            "node": "Was newly signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was newly signed": {
+      "main": [
+        [
+          {
+            "node": "Mark creator contracted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark creator contracted": {
+      "main": [
+        [
+          {
+            "node": "Audit contract signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit contract signed": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack: contract signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DocuSeal Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is document completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0be7f4f3-f4c8-45d7-a534-06b5f0c3b4dc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7bcd3f2abd3657f8c606a6047cc200e3f6fec41a2546e84fd430428b0e15d977"
+  },
+  "nodeGroups": [],
+  "id": "tDPYWCAkh9G2nnGW",
+  "tags": []
+}
