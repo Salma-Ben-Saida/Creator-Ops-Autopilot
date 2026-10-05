@@ -117,13 +117,17 @@ To retry failed creators:
 
 ```sql
 UPDATE creators SET status = 'accepted' WHERE status = 'onboarding_failed';
+```
+
 Customization
 Batch size: change LIMIT 5 in "Claim accepted creators".
 Voice: change the voice ID in the "Voice note" URL.
 Message tone/length: edit the prompt in "Message a model".
 Schedule: replace the Manual Trigger with a Schedule Trigger to run it
 automatically.
-Known limitations
+
+
+Known limitations: 
 Fixed recipient: emails currently go to salmasaida003@gmail.com
 (test mode), not to each creator's contact_email. Change the Gmail
 To field to {{ $('Claim accepted creators').item.json.contact_email }}
